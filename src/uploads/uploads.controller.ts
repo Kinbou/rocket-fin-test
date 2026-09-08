@@ -6,14 +6,19 @@ import {
   Headers,
   UploadedFile,
   UseInterceptors,
+  UseGuards,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 import { UploadsService } from './uploads.service.js';
+import { ApiKeyGuard } from '../common/guards/api-key.guard.js';
+import { CurrentOrganization } from '../common/decorators/current-organizaation.decorator.js';
+import { Organization } from '../organizations/entities/organization.entity.js';
 
 @Controller('uploads')
+@UseGuards(ApiKeyGuard)
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
@@ -22,6 +27,7 @@ export class UploadsController {
   async upload(
     @UploadedFile() file: Express.Multer.File,
     @Headers('idempotency-key') idempotencyKey: string,
+    @CurrentOrganization() organization: Organization,
   ) {
     if (!file) {
       throw new BadRequestException('Fichier manquant (champ "file")');
@@ -30,11 +36,8 @@ export class UploadsController {
       throw new BadRequestException('Header Idempotency-Key manquant');
     }
 
-    // TODO : remplacer par la vraie organisation une fois le guard clé API en place
-    const fakeOrganization = { id: 'TODO' } as any;
-
     const uploadJob = await this.uploadsService.createUpload(
-      fakeOrganization,
+      organization,
       file,
       idempotencyKey,
     );
@@ -46,11 +49,11 @@ export class UploadsController {
   }
 
   @Get(':id')
-  async getStatus(@Param('id') id: string) {
-    // TODO : filtrer par organisation une fois le guard en place
-    const fakeOrganization = { id: 'TODO' } as any;
-
-    const uploadJob = await this.uploadsService.findOne(fakeOrganization, id);
+  async getStatus(
+    @Param('id') id: string,
+    @CurrentOrganization() organization: Organization,
+  ) {
+    const uploadJob = await this.uploadsService.findOne(organization, id);
     if (!uploadJob) {
       throw new NotFoundException('Job introuvable');
     }
