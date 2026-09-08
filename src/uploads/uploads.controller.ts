@@ -61,6 +61,7 @@ export class UploadsController {
     return {
       id: uploadJob.id,
       status: uploadJob.status,
+      result: uploadJob.result,
       updatedAt: uploadJob.updatedAt,
     };
   }
