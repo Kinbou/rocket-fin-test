@@ -37,7 +37,7 @@ export class ScoringProcessor extends WorkerHost {
 
     const result = {
       score: Math.round(Math.random() * 1000) / 10,
-      processedAt: new Date().toISOString(),
+      processedAt: new Date().toISOString(), // nouvelle API JS : Temporal
     };
 
     await this.uploadJobRepository.update(uploadJobId, {
