@@ -1,13 +1,22 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
+import { BullModule } from '@nestjs/bullmq';
 import { typeOrmConfig } from './config/typeorm.config.js';
+import { UploadsModule } from './uploads/uploads.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { UploadsModule } from './uploads/uploads.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forRoot(typeOrmConfig), UploadsModule],
+  imports: [
+    TypeOrmModule.forRoot(typeOrmConfig),
+    BullModule.forRoot({
+      connection: {
+        host: process.env.REDIS_HOST ?? 'localhost',
+        port: Number.parseInt(process.env.REDIS_PORT ?? '6379', 10),
+      },
+    }),
+    UploadsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
