@@ -27,8 +27,6 @@ export class UploadsService {
     file: Express.Multer.File,
     idempotencyKey: string,
   ): Promise<UploadJob> {
-    // 1. Idempotence : si ce couple (organisation, clé) existe déjà, on renvoie
-    //    le job existant tel quel, sans rien recréer ni relancer de traitement.
     const existing = await this.uploadJobRepository.findOne({
       where: { organization: { id: organization.id }, idempotencyKey },
     });
@@ -54,9 +52,6 @@ export class UploadsService {
     try {
       await this.uploadJobRepository.save(uploadJob);
     } catch {
-      // Race condition : deux requêtes quasi simultanées ont passé le check
-      // ci-dessus en même temps. La contrainte unique en base a bloqué le
-      // doublon — on récupère le job gagnant plutôt que de renvoyer une erreur.
       const winner = await this.uploadJobRepository.findOne({
         where: { organization: { id: organization.id }, idempotencyKey },
       });
@@ -69,7 +64,11 @@ export class UploadsService {
     await this.scoringQueue.add(
       'process-upload',
       { uploadJobId: uploadJob.id },
-      { jobId: uploadJob.id },
+      {
+        jobId: uploadJob.id,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+      },
     );
 
     await this.uploadJobRepository.update(uploadJob.id, {
